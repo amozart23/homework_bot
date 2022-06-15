@@ -18,7 +18,7 @@ TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 RETRY_TIME = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
-HEADERS = {'Authorization': PRACTICUM_TOKEN}
+HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
 
 HOMEWORK_STATUSES = {
@@ -27,19 +27,19 @@ HOMEWORK_STATUSES = {
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
 }
 
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO)
+# logging.basicConfig(
+#     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+#     level=logging.INFO)
 
 
-def send_message(bot, message):
-    """Send a status."""
-    button = ReplyKeyboardMarkup([['/check']], resize_keyboard=True)
-    bot.send_message(
-        chat_id=TELEGRAM_CHAT_ID,
-        text='Привет, {}. Посмотри какого котика я тебе нашел',
-        reply_markup=button
-        )
+# def send_message(bot, message):
+#     """Send a status."""
+#     button = ReplyKeyboardMarkup([['/check']], resize_keyboard=True)
+#     bot.send_message(
+#         chat_id=TELEGRAM_CHAT_ID,
+#         text='Привет, {}. Посмотри какого котика я тебе нашел',
+#         reply_markup=button
+#         )
 
 
 def get_api_answer(current_timestamp):
@@ -62,8 +62,8 @@ def parse_status(homework):
     В качестве параметра функция получает только один элемент из списка домашних работ.
     В случае успеха, функция возвращает подготовленную для отправки в Telegram строку, содержащую один из вердиктов словаря HOMEWORK_STATUSES.
     """
-    homework_name = homework['homework_name']
-    homework_status = homework['status']
+    homework_name = homework['homeworks'][0]['homework_name']
+    homework_status = homework['homeworks'][0]['status']
     verdict = HOMEWORK_STATUSES[homework_status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
@@ -95,4 +95,8 @@ def main():
 
 if __name__ == '__main__':
     # main()
-    print(parse_status(get_api_answer(int(time.time()))))
+    my_datetime = datetime.date(2022, 5, 25)
+    unix_time = int(time.mktime(my_datetime.timetuple()))
+    print(parse_status(get_api_answer(unix_time)))
+
+    # pprint(get_api_answer(unix_time))
