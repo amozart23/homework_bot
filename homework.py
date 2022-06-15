@@ -1,4 +1,5 @@
 import requests
+import telegram
 from pprint import pprint
 import datetime
 import exceptions
@@ -6,7 +7,7 @@ import time
 import logging
 import os
 from telegram import ReplyKeyboardMarkup
-from telegram.ext import CommandHandler, Updater
+from telegram.ext import CommandHandler
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,7 +17,7 @@ PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
-RETRY_TIME = 600
+RETRY_TIME = 6
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
@@ -45,8 +46,11 @@ HOMEWORK_STATUSES = {
 def get_api_answer(current_timestamp):
     """Get a response from the request."""
     timestamp = current_timestamp or int(time.time())
-    params = {'from_date': timestamp}
-    return requests.get(ENDPOINT, headers=HEADERS, params=params).json()
+    data = {
+        'headers': HEADERS,
+        'params': {'from_date': timestamp}
+    }
+    return requests.get(ENDPOINT, **data).json()
 
 
 def check_response(response) -> bool:
@@ -55,17 +59,15 @@ def check_response(response) -> bool:
     return type_is_correct
 
 
-
-def parse_status(homework):
-    """
-    Функция parse_status() извлекает из информации о конкретной домашней работе статус этой работы.
-    В качестве параметра функция получает только один элемент из списка домашних работ.
-    В случае успеха, функция возвращает подготовленную для отправки в Telegram строку, содержащую один из вердиктов словаря HOMEWORK_STATUSES.
-    """
-    homework_name = homework['homeworks'][0]['homework_name']
-    homework_status = homework['homeworks'][0]['status']
-    verdict = HOMEWORK_STATUSES[homework_status]
-    return f'Изменился статус проверки работы "{homework_name}". {verdict}'
+def parse_status(homework) -> str:
+    """Parse the last homework and return its status to send to Telegram."""
+    try:
+        homework_name = homework['homeworks'][0]['homework_name']
+        homework_status = homework['homeworks'][0]['status']
+        verdict = HOMEWORK_STATUSES[homework_status]
+        return f'Изменился статус проверки работы "{homework_name}". {verdict}'
+    except IndexError:
+        return 'Домашних работ нет.'
 
 
 def check_tokens() -> bool:
@@ -77,26 +79,34 @@ def check_tokens() -> bool:
         return True
 
 
+# При периодических запросах к API можно использовать значение, полученное под ключом current_date, в качестве параметра from_date в следующем запросе.
+
+
 def main():
     """Основная логика работы бота."""
-    # bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    current_timestamp = int(time.time())
-    try:
-        response = get_api_answer(current_timestamp)
-        print(parse_status(response))
-        time.sleep(RETRY_TIME)
-    except Exception as error:
-        message = f'Сбой в работе программы: {error}'
-        time.sleep(RETRY_TIME)
-        print(error)
-    else:
-        pass
+    bot = telegram.Bot(token=TELEGRAM_TOKEN)
+    my_datetime = datetime.date(2022, 5, 25)
+    current_timestamp = int(time.mktime(my_datetime.timetuple()))
+    # current_timestamp = int(time.time())
+    while True:
+        try:
+            response = get_api_answer(current_timestamp)
+            last_response = ''
+            result = parse_status(response)
+            
+            bot.send_message(TELEGRAM_CHAT_ID, result)
+            time.sleep(RETRY_TIME)
+        except Exception as error:
+            message = f'Сбой в работе программы: {error}'
+            time.sleep(RETRY_TIME)
+            print(message)
+        else:
+            pass
 
 
 if __name__ == '__main__':
-    # main()
-    my_datetime = datetime.date(2022, 5, 25)
-    unix_time = int(time.mktime(my_datetime.timetuple()))
-    print(parse_status(get_api_answer(unix_time)))
-
+    main()
+    # my_datetime = datetime.date(2022, 5, 25)
+    # unix_time = int(time.mktime(my_datetime.timetuple()))
+    # print(parse_status(get_api_answer(unix_time)))
     # pprint(get_api_answer(unix_time))
