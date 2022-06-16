@@ -58,7 +58,9 @@ def get_api_answer(current_timestamp) -> dict:
 def check_response(response):
     """Check if response is correct."""
     type_is_correct = isinstance(response, dict)
-    if type_is_correct:
+    dict_is_not_empty = len(response) > 0
+    homeworks_is_list = isinstance(response['homeworks'], list)
+    if type_is_correct and dict_is_not_empty and homeworks_is_list:
         return response
     else:
         raise exceptions.SomethingWentWrong
@@ -67,12 +69,12 @@ def check_response(response):
 def parse_status(homework) -> str:
     """Parse the last homework and return its status to send to Telegram."""
     try:
-        homework_name = homework['homeworks'][0]['homework_name']
-        homework_status = homework['homeworks'][0]['status']
+        homework_name = homework['homework_name']
+        homework_status = homework['status']
         verdict = HOMEWORK_STATUSES[homework_status]
         return f'Изменился статус проверки работы "{homework_name}". {verdict}'
-    except IndexError:
-        return 'Домашних работ нет.'
+    except Exception as error:
+        logging.error(error)
 
 
 def check_tokens() -> bool:
@@ -98,7 +100,7 @@ def main():
     while True:
         try:
             response = get_api_answer(current_timestamp)
-            result = parse_status(response)
+            result = parse_status(response['homeworks'][0])
             if result != last_response:
                 send_message(bot, result),
                 last_response = result
@@ -112,9 +114,9 @@ def main():
 
 
 if __name__ == '__main__':
-    # main()
-    my_datetime = datetime.date(2022, 5, 25)
-    print(type(get_api_answer(int(time.mktime(my_datetime.timetuple())))))
+    main()
+    # my_datetime = datetime.date(2022, 5, 25)
+    # print(type(get_api_answer(int(time.mktime(my_datetime.timetuple())))))
     # my_datetime = datetime.date(2022, 5, 25)
     # unix_time = 
     # print(parse_status(get_api_answer(unix_time)))
