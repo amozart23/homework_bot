@@ -33,30 +33,35 @@ HOMEWORK_STATUSES = {
 #     level=logging.INFO)
 
 
-# def send_message(bot, message):
-#     """Send a status."""
-#     button = ReplyKeyboardMarkup([['/check']], resize_keyboard=True)
-#     bot.send_message(
-#         chat_id=TELEGRAM_CHAT_ID,
-#         text='Привет, {}. Посмотри какого котика я тебе нашел',
-#         reply_markup=button
-#         )
+def send_message(bot, message):
+    """Send a status."""
+    button = ReplyKeyboardMarkup([['/check']], resize_keyboard=True)
+    bot.send_message(
+        chat_id=TELEGRAM_CHAT_ID,
+        text=message,
+        reply_markup=button
+        )
 
 
-def get_api_answer(current_timestamp):
+def get_api_answer(current_timestamp) -> dict:
     """Get a response from the request."""
     timestamp = current_timestamp or int(time.time())
     data = {
         'headers': HEADERS,
         'params': {'from_date': timestamp}
     }
+    if requests.get(ENDPOINT, **data).status_code != 200:
+        raise exceptions.SomethingWentWrong
     return requests.get(ENDPOINT, **data).json()
 
 
-def check_response(response) -> bool:
+def check_response(response):
     """Check if response is correct."""
     type_is_correct = isinstance(response, dict)
-    return type_is_correct
+    if type_is_correct:
+        return response
+    else:
+        raise exceptions.SomethingWentWrong
 
 
 def parse_status(homework) -> str:
@@ -85,16 +90,18 @@ def check_tokens() -> bool:
 def main():
     """Основная логика работы бота."""
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
+    
     my_datetime = datetime.date(2022, 5, 25)
     current_timestamp = int(time.mktime(my_datetime.timetuple()))
     # current_timestamp = int(time.time())
+    last_response = ''
     while True:
         try:
             response = get_api_answer(current_timestamp)
-            last_response = ''
             result = parse_status(response)
-            
-            bot.send_message(TELEGRAM_CHAT_ID, result)
+            if result != last_response:
+                send_message(bot, result),
+                last_response = result
             time.sleep(RETRY_TIME)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
@@ -105,8 +112,10 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    my_datetime = datetime.date(2022, 5, 25)
+    print(type(get_api_answer(int(time.mktime(my_datetime.timetuple())))))
     # my_datetime = datetime.date(2022, 5, 25)
-    # unix_time = int(time.mktime(my_datetime.timetuple()))
+    # unix_time = 
     # print(parse_status(get_api_answer(unix_time)))
     # pprint(get_api_answer(unix_time))
