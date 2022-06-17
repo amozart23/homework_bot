@@ -74,7 +74,7 @@ def parse_status(homework) -> str:
         verdict = HOMEWORK_STATUSES[homework_status]
         return f'Изменился статус проверки работы "{homework_name}". {verdict}'
     except Exception as error:
-        logging.error(error)
+        raise exceptions.SomethingWentWrong(f'{error}')
 
 
 def check_tokens() -> bool:
@@ -92,7 +92,6 @@ def check_tokens() -> bool:
 def main():
     """Основная логика работы бота."""
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    
     my_datetime = datetime.date(2022, 5, 25)
     current_timestamp = int(time.mktime(my_datetime.timetuple()))
     # current_timestamp = int(time.time())
