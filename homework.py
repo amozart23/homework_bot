@@ -74,7 +74,7 @@ def parse_status(homework) -> str:
         verdict = HOMEWORK_STATUSES[homework_status]
         return f'Изменился статус проверки работы "{homework_name}". {verdict}'
     except Exception as error:
-        raise exceptions.SomethingWentWrong(f'{error}')
+        raise exceptions.SomethingWentWrong(error)
 
 
 def check_tokens() -> bool:
@@ -108,14 +108,20 @@ def main():
             message = f'Сбой в работе программы: {error}'
             time.sleep(RETRY_TIME)
             print(message)
-        else:
-            pass
+
 
 
 if __name__ == '__main__':
     main()
     # my_datetime = datetime.date(2022, 5, 25)
-    # print(type(get_api_answer(int(time.mktime(my_datetime.timetuple())))))
+    # my_datetime = datetime.date(2022, 5, 25)
+    # current_timestamp = int(time.mktime(my_datetime.timetuple()))
+    # response = get_api_answer(current_timestamp)
+    # print(parse_status(response['homeworks'][0]))
+    # print(type(response['homeworks'][0]))
+    # print(response['homeworks'][0])
+
+
     # my_datetime = datetime.date(2022, 5, 25)
     # unix_time = 
     # print(parse_status(get_api_answer(unix_time)))
