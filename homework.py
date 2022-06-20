@@ -45,7 +45,7 @@ def send_message(bot, message):
     bot.send_message(
         chat_id=TELEGRAM_CHAT_ID,
         text=message
-        )
+    )
 
 
 def get_api_answer(current_timestamp) -> dict:
@@ -68,14 +68,12 @@ def check_response(response) -> list:
     dict_is_not_empty = len(response) > 0
     homeworks_is_list = isinstance(response['homeworks'], list)
     homework_exists = response['homeworks'][0] is not None
-    if all(
-           [
+    if all([
             type_is_correct,
             dict_is_not_empty,
             homeworks_is_list,
             homework_exists
-            ]
-             ):
+            ]):
         return response['homeworks']
     else:
         raise exceptions.SomethingWentWrong
