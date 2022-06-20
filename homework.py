@@ -1,13 +1,11 @@
-import requests
+"""Homework API Telegram-bot."""
 import telegram
-from pprint import pprint
-import datetime
 import exceptions
 import time
 import logging
 import os
-from telegram import ReplyKeyboardMarkup
-from telegram.ext import CommandHandler
+import sys
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,10 +14,23 @@ load_dotenv()
 PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-
-RETRY_TIME = 6
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+RETRY_TIME = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
+
+
+log_format = (
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+log_stream = sys.stdout
+logging.basicConfig(
+    level=logging.INFO,
+    format=log_format,
+    handlers=[
+        logging.StreamHandler(log_stream)
+    ]
+)
 
 
 HOMEWORK_STATUSES = {
@@ -28,18 +39,12 @@ HOMEWORK_STATUSES = {
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
 }
 
-# logging.basicConfig(
-#     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-#     level=logging.INFO)
-
 
 def send_message(bot, message):
     """Send a status."""
-    button = ReplyKeyboardMarkup([['/check']], resize_keyboard=True)
     bot.send_message(
         chat_id=TELEGRAM_CHAT_ID,
-        text=message,
-        reply_markup=button
+        text=message
         )
 
 
@@ -50,9 +55,11 @@ def get_api_answer(current_timestamp) -> dict:
         'headers': HEADERS,
         'params': {'from_date': timestamp}
     }
-    if requests.get(ENDPOINT, **data).status_code != 200:
+    request = requests.get(ENDPOINT, **data)
+    if request.status_code != 200:
+        logging.error('Ресурс недоступен')
         raise exceptions.SomethingWentWrong
-    return requests.get(ENDPOINT, **data).json()
+    return request.json()
 
 
 def check_response(response) -> list:
@@ -61,7 +68,14 @@ def check_response(response) -> list:
     dict_is_not_empty = len(response) > 0
     homeworks_is_list = isinstance(response['homeworks'], list)
     homework_exists = response['homeworks'][0] is not None
-    if all([type_is_correct, dict_is_not_empty, homeworks_is_list, homework_exists]):
+    if all(
+           [
+            type_is_correct,
+            dict_is_not_empty,
+            homeworks_is_list,
+            homework_exists
+            ]
+             ):
         return response['homeworks']
     else:
         raise exceptions.SomethingWentWrong
@@ -86,7 +100,10 @@ def check_tokens() -> bool:
 
 def main():
     """Run the main logic."""
-    bot = telegram.Bot(token=TELEGRAM_TOKEN)
+    if check_tokens:
+        bot = telegram.Bot(token=TELEGRAM_TOKEN)
+    else:
+        logging.critical('Нет обязательных переменных!')
     current_timestamp = int(time.time())
     last_response = ''
     while True:
@@ -97,7 +114,10 @@ def main():
             result = parse_status(homework[0])
             if result != last_response:
                 send_message(bot, result)
+                logging.ingo(f'Успешно отправлено сообщение"{result}"')
                 last_response = result
+            else:
+                logging.debug('Новые сообщения отсутствуют')
             time.sleep(RETRY_TIME)
         except IndexError:
             result = 'Домашних работ нет'
@@ -107,7 +127,8 @@ def main():
             time.sleep(RETRY_TIME)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
-            print(message)
+            send_message(bot, message)
+            logging.error(message)
 
 
 if __name__ == '__main__':
