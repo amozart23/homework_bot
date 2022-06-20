@@ -55,26 +55,23 @@ def get_api_answer(current_timestamp) -> dict:
     return requests.get(ENDPOINT, **data).json()
 
 
-def check_response(response):
+def check_response(response) -> list:
     """Check if response is correct."""
     type_is_correct = isinstance(response, dict)
     dict_is_not_empty = len(response) > 0
     homeworks_is_list = isinstance(response['homeworks'], list)
-    if type_is_correct and dict_is_not_empty and homeworks_is_list:
-        return response
+    if all([type_is_correct, dict_is_not_empty, homeworks_is_list]):
+        return response['homeworks']
     else:
         raise exceptions.SomethingWentWrong
 
 
 def parse_status(homework) -> str:
     """Parse the last homework and return its status to send to Telegram."""
-    try:
-        homework_name = homework['homework_name']
-        homework_status = homework['status']
-        verdict = HOMEWORK_STATUSES[homework_status]
-        return f'Изменился статус проверки работы "{homework_name}". {verdict}'
-    except Exception as error:
-        raise exceptions.SomethingWentWrong(error)
+    homework_name = homework['homework_name']
+    homework_status = homework['status']
+    verdict = HOMEWORK_STATUSES[homework_status]
+    return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def check_tokens() -> bool:
@@ -90,7 +87,7 @@ def check_tokens() -> bool:
 
 
 def main():
-    """Основная логика работы бота."""
+    """The main function."""
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     my_datetime = datetime.date(2022, 5, 25)
     current_timestamp = int(time.mktime(my_datetime.timetuple()))
@@ -99,26 +96,24 @@ def main():
     while True:
         try:
             response = get_api_answer(current_timestamp)
-            result = parse_status(response['homeworks'][0])
+            homework = check_response(response)
+            result = parse_status(homework[0])
             if result != last_response:
-                send_message(bot, result),
+                send_message(bot, result)
                 last_response = result
             time.sleep(RETRY_TIME)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
-            time.sleep(RETRY_TIME)
             print(message)
-
 
 
 if __name__ == '__main__':
     main()
     # my_datetime = datetime.date(2022, 5, 25)
-    # my_datetime = datetime.date(2022, 5, 25)
     # current_timestamp = int(time.mktime(my_datetime.timetuple()))
     # response = get_api_answer(current_timestamp)
-    # print(parse_status(response['homeworks'][0]))
-    # print(type(response['homeworks'][0]))
+    # print(type(check_response(response)))
+    # print(type(response['homeworks']))
     # print(response['homeworks'][0])
 
 
