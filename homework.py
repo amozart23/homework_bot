@@ -73,7 +73,7 @@ def check_response(response) -> list:
             dict_is_not_empty,
             homeworks_is_list,
             homework_exists
-            ]):
+    ]):
         return response['homeworks']
     else:
         raise exceptions.SomethingWentWrong
