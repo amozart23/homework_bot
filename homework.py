@@ -60,7 +60,8 @@ def check_response(response) -> list:
     type_is_correct = isinstance(response, dict)
     dict_is_not_empty = len(response) > 0
     homeworks_is_list = isinstance(response['homeworks'], list)
-    if all([type_is_correct, dict_is_not_empty, homeworks_is_list]):
+    homework_exists = response['homeworks'][0] is not None
+    if all([type_is_correct, dict_is_not_empty, homeworks_is_list, homework_exists]):
         return response['homeworks']
     else:
         raise exceptions.SomethingWentWrong
@@ -83,21 +84,23 @@ def check_tokens() -> bool:
         return True
 
 
-# При периодических запросах к API можно использовать значение, полученное под ключом current_date, в качестве параметра from_date в следующем запросе.
-
-
 def main():
-    """The main function."""
+    """Run the main logic."""
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    my_datetime = datetime.date(2022, 5, 25)
-    current_timestamp = int(time.mktime(my_datetime.timetuple()))
-    # current_timestamp = int(time.time())
+    current_timestamp = int(time.time())
     last_response = ''
     while True:
         try:
             response = get_api_answer(current_timestamp)
+            current_timestamp = response['current_date']
             homework = check_response(response)
             result = parse_status(homework[0])
+            if result != last_response:
+                send_message(bot, result)
+                last_response = result
+            time.sleep(RETRY_TIME)
+        except IndexError:
+            result = 'Домашних работ нет'
             if result != last_response:
                 send_message(bot, result)
                 last_response = result
@@ -109,15 +112,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    # my_datetime = datetime.date(2022, 5, 25)
-    # current_timestamp = int(time.mktime(my_datetime.timetuple()))
-    # response = get_api_answer(current_timestamp)
-    # print(type(check_response(response)))
-    # print(type(response['homeworks']))
-    # print(response['homeworks'][0])
-
-
-    # my_datetime = datetime.date(2022, 5, 25)
-    # unix_time = 
-    # print(parse_status(get_api_answer(unix_time)))
-    # pprint(get_api_answer(unix_time))
