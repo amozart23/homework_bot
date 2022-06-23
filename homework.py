@@ -7,6 +7,7 @@ import os
 import sys
 import requests
 from dotenv import load_dotenv
+from http import HTTPStatus
 
 load_dotenv()
 
@@ -48,7 +49,7 @@ def get_api_answer(current_timestamp) -> dict:
     except requests.ConnectionError as err:
         raise exceptions.SomethingWentWrong(
             f'Ошибка соединения: {err}') from err
-    if response.status_code != 200:
+    if response.status_code != HTTPStatus.OK:
         raise exceptions.SomethingWentWrong('Ресурс недоступен')
     return response.json()
 
